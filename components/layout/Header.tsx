@@ -52,6 +52,7 @@ export default function Header() {
 
   const handleLogin = async () => {
     if (!loginEmail || !loginPassword) {
+      setError(new AuthError("Kindly fill in all fields", 400, "400"));
       return;
     }
 
@@ -59,17 +60,32 @@ export default function Header() {
     formData.append("email", loginEmail);
     formData.append("password", loginPassword);
     const response = await login(formData);
-    if (response?.error) {
-      setError(new AuthError(response.error, response.status, "500"));
+    if (response instanceof AuthError) {
+      setError(response);
     }
+
+    console.log(response);
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
+    if (!signupName || !signupEmail || !signupPassword) {
+      setError(new AuthError("Kindly fill in all fields", 400, "400"));
+      return;
+    }
+
     const formData = new FormData();
     formData.append("name", signupName);
     formData.append("email", signupEmail);
     formData.append("password", signupPassword);
-    signup(formData);
+    const response = await signup(formData);
+
+    if (response instanceof AuthError) {
+      setError(response);
+    } else {
+      // Handle successful signup, e.g., show success message, navigate, etc.
+    }
+
+    console.log(response);
   };
 
   return (
@@ -234,12 +250,12 @@ export default function Header() {
                           </label>
                           <Input
                             id="loginEmail"
-                            placeholder="Enter your email"
-                            className="w-full"
                             type="email"
+                            placeholder="Your email"
                             value={loginEmail}
                             onChange={(e) => setLoginEmail(e.target.value)}
                           />
+
                           <label
                             htmlFor="loginPassword"
                             className="text-sm font-semibold mb-1"
@@ -248,24 +264,18 @@ export default function Header() {
                           </label>
                           <Input
                             id="loginPassword"
-                            placeholder="Enter your password"
-                            className="w-full"
+                            type="password"
+                            placeholder="Your password"
                             value={loginPassword}
                             onChange={(e) => setLoginPassword(e.target.value)}
-                            type="password"
                           />
-                          <div className="flex gap-3 mt-6 justify-end">
-                            <Dialog.Close asChild>
-                              <Button variant="secondary" color="gray">
-                                Cancel
-                              </Button>
-                            </Dialog.Close>
-                            <Dialog.Close asChild>
-                              <Button onClick={handleLogin} variant="default">
-                                Log In
-                              </Button>
-                            </Dialog.Close>
-                          </div>
+
+                          <Button
+                            onClick={handleLogin}
+                            className="mt-4 bg-green-600 hover:bg-green-700"
+                          >
+                            Log In
+                          </Button>
                         </div>
                       )}
 
@@ -280,11 +290,12 @@ export default function Header() {
                           </label>
                           <Input
                             id="signupName"
-                            placeholder="Enter your name"
-                            className="w-full"
+                            type="text"
+                            placeholder="Your name"
                             value={signupName}
                             onChange={(e) => setSignupName(e.target.value)}
                           />
+
                           <label
                             htmlFor="signupEmail"
                             className="text-sm font-semibold mb-1"
@@ -293,12 +304,12 @@ export default function Header() {
                           </label>
                           <Input
                             id="signupEmail"
-                            placeholder="Enter your email"
-                            className="w-full"
+                            type="email"
+                            placeholder="Your email"
                             value={signupEmail}
                             onChange={(e) => setSignupEmail(e.target.value)}
-                            type="email"
                           />
+
                           <label
                             htmlFor="signupPassword"
                             className="text-sm font-semibold mb-1"
@@ -307,24 +318,18 @@ export default function Header() {
                           </label>
                           <Input
                             id="signupPassword"
-                            placeholder="Enter your password"
-                            className="w-full"
+                            type="password"
+                            placeholder="Your password"
                             value={signupPassword}
                             onChange={(e) => setSignupPassword(e.target.value)}
-                            type="password"
                           />
-                          <div className="flex gap-3 mt-6 justify-end">
-                            <Dialog.Close asChild>
-                              <Button variant="secondary" color="gray">
-                                Cancel
-                              </Button>
-                            </Dialog.Close>
-                            <Dialog.Close asChild>
-                              <Button onClick={handleSignup} variant="default">
-                                Sign Up
-                              </Button>
-                            </Dialog.Close>
-                          </div>
+
+                          <Button
+                            onClick={handleSignup}
+                            className="mt-4 bg-green-600 hover:bg-green-700"
+                          >
+                            Sign Up
+                          </Button>
                         </div>
                       )}
                     </div>
