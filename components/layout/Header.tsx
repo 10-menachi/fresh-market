@@ -1,13 +1,13 @@
 "use client";
-
+import { useUserContext } from "@/context/UserContext";
 import { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   ShoppingCart,
   Search,
-  Menu,
   LogIn,
   ShoppingBasket,
   User,
@@ -19,33 +19,69 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import * as Dialog from "@radix-ui/react-dialog";
-import { createClient } from "@/utils/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { login, signup } from "@/app/auth/login/actions";
+import CartPreview from "../CartPreview";
+import ToastDemo from "../Toast";
+import { AuthError } from "@supabase/supabase-js";
 
 export default function Header() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isLoggedIn, setIsLoggedIn } = useUserContext();
   const [tab, setTab] = useState("login");
+
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [error, setError] = useState<AuthError | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
       const supabase = await createClient();
-
       const { data: user, error } = await supabase.auth.getUser();
-
-      if (error) {
-        console.error("Error fetching user:", error.message);
-        setIsLoggedIn(false);
-      } else {
+      if (!error) {
         setIsLoggedIn(!!user);
       }
     };
 
     getUser();
-  }, []);
+  }, [setIsLoggedIn, setError]);
+
+  const handleLogin = async () => {
+    if (!loginEmail || !loginPassword) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("email", loginEmail);
+    formData.append("password", loginPassword);
+    const response = await login(formData);
+    if (response?.error) {
+      setError(new AuthError(response.error, response.status, "500"));
+    }
+  };
+
+  const handleSignup = () => {
+    const formData = new FormData();
+    formData.append("name", signupName);
+    formData.append("email", signupEmail);
+    formData.append("password", signupPassword);
+    signup(formData);
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b">
+      {error && (
+        <ToastDemo
+          title={error.name}
+          code={error.code || ""}
+          description={error.message}
+          open={true}
+        />
+      )}
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -54,7 +90,7 @@ export default function Header() {
             <span className="font-bold text-xl">Fresh Market</span>
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <Link
               href="#products"
@@ -79,7 +115,7 @@ export default function Header() {
             </Link>
           </nav>
 
-          {/* Search, Cart, Login/Profile, and Mobile Menu */}
+          {/* Search, Cart, Login/Profile */}
           <div className="flex items-center space-x-4">
             {/* Search */}
             <Sheet>
@@ -138,7 +174,7 @@ export default function Header() {
                     <p className="text-sm text-gray-600">johndoe@example.com</p>
                     <Button
                       className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white"
-                      onClick={() => setIsLoggedIn(false)}
+                      onClick={() => setIsLoggedIn(false)} // Log out
                     >
                       Logout
                     </Button>
@@ -173,7 +209,7 @@ export default function Header() {
                               : "text-gray-600"
                           }`}
                         >
-                          Login
+                          Log In
                         </button>
                         <button
                           onClick={() => setTab("signup")}
@@ -183,196 +219,122 @@ export default function Header() {
                               : "text-gray-600"
                           }`}
                         >
-                          Signup
+                          Sign Up
                         </button>
                       </div>
-                      <div className="mt-6">
-                        {tab === "login" ? (
-                          // Login Form
-                          <div className="flex flex-col gap-3">
-                            <label>
-                              <span className="text-sm font-semibold mb-1">
-                                Email
-                              </span>
-                              <Input
-                                placeholder="Enter your email"
-                                className="w-full"
-                                type="email"
-                              />
-                            </label>
-                            <label>
-                              <span className="text-sm font-semibold mb-1">
-                                Password
-                              </span>
-                              <Input
-                                placeholder="Enter your password"
-                                className="w-full"
-                                type="password"
-                              />
-                            </label>
-                            <div className="flex gap-3 mt-6 justify-end">
-                              <Dialog.Close asChild>
-                                <Button variant="secondary" color="gray">
-                                  Cancel
-                                </Button>
-                              </Dialog.Close>
-                              <Dialog.Close asChild>
-                                <Button
-                                  className="bg-green-600 text-white"
-                                  onClick={() => setIsLoggedIn(true)}
-                                >
-                                  Login
-                                </Button>
-                              </Dialog.Close>
-                            </div>
+
+                      {/* Login Form */}
+                      {tab === "login" && (
+                        <div className="flex flex-col gap-3 mt-4">
+                          <label
+                            htmlFor="loginEmail"
+                            className="text-sm font-semibold mb-1"
+                          >
+                            Email
+                          </label>
+                          <Input
+                            id="loginEmail"
+                            placeholder="Enter your email"
+                            className="w-full"
+                            type="email"
+                            value={loginEmail}
+                            onChange={(e) => setLoginEmail(e.target.value)}
+                          />
+                          <label
+                            htmlFor="loginPassword"
+                            className="text-sm font-semibold mb-1"
+                          >
+                            Password
+                          </label>
+                          <Input
+                            id="loginPassword"
+                            placeholder="Enter your password"
+                            className="w-full"
+                            value={loginPassword}
+                            onChange={(e) => setLoginPassword(e.target.value)}
+                            type="password"
+                          />
+                          <div className="flex gap-3 mt-6 justify-end">
+                            <Dialog.Close asChild>
+                              <Button variant="secondary" color="gray">
+                                Cancel
+                              </Button>
+                            </Dialog.Close>
+                            <Dialog.Close asChild>
+                              <Button onClick={handleLogin} variant="default">
+                                Log In
+                              </Button>
+                            </Dialog.Close>
                           </div>
-                        ) : (
-                          // Signup Form
-                          <div className="flex flex-col gap-3">
-                            <label>
-                              <span className="text-sm font-semibold mb-1">
-                                Name
-                              </span>
-                              <Input
-                                placeholder="Enter your name"
-                                className="w-full"
-                                type="text"
-                              />
-                            </label>
-                            <label>
-                              <span className="text-sm font-semibold mb-1">
-                                Email
-                              </span>
-                              <Input
-                                placeholder="Enter your email"
-                                className="w-full"
-                                type="email"
-                              />
-                            </label>
-                            <label>
-                              <span className="text-sm font-semibold mb-1">
-                                Password
-                              </span>
-                              <Input
-                                placeholder="Create a password"
-                                className="w-full"
-                                type="password"
-                              />
-                            </label>
-                            <label>
-                              <span className="text-sm font-semibold mb-1">
-                                Confirm Password
-                              </span>
-                              <Input
-                                placeholder="Confirm your password"
-                                className="w-full"
-                                type="password"
-                              />
-                            </label>
-                            <div className="flex gap-3 mt-6 justify-end">
-                              <Dialog.Close asChild>
-                                <Button variant="secondary" color="gray">
-                                  Cancel
-                                </Button>
-                              </Dialog.Close>
-                              <Dialog.Close asChild>
-                                <Button
-                                  className="bg-green-600 text-white"
-                                  onClick={() => setIsLoggedIn(true)}
-                                >
-                                  Signup
-                                </Button>
-                              </Dialog.Close>
-                            </div>
+                        </div>
+                      )}
+
+                      {/* Signup Form */}
+                      {tab === "signup" && (
+                        <div className="flex flex-col gap-3 mt-4">
+                          <label
+                            htmlFor="signupName"
+                            className="text-sm font-semibold mb-1"
+                          >
+                            Name
+                          </label>
+                          <Input
+                            id="signupName"
+                            placeholder="Enter your name"
+                            className="w-full"
+                            value={signupName}
+                            onChange={(e) => setSignupName(e.target.value)}
+                          />
+                          <label
+                            htmlFor="signupEmail"
+                            className="text-sm font-semibold mb-1"
+                          >
+                            Email
+                          </label>
+                          <Input
+                            id="signupEmail"
+                            placeholder="Enter your email"
+                            className="w-full"
+                            value={signupEmail}
+                            onChange={(e) => setSignupEmail(e.target.value)}
+                            type="email"
+                          />
+                          <label
+                            htmlFor="signupPassword"
+                            className="text-sm font-semibold mb-1"
+                          >
+                            Password
+                          </label>
+                          <Input
+                            id="signupPassword"
+                            placeholder="Enter your password"
+                            className="w-full"
+                            value={signupPassword}
+                            onChange={(e) => setSignupPassword(e.target.value)}
+                            type="password"
+                          />
+                          <div className="flex gap-3 mt-6 justify-end">
+                            <Dialog.Close asChild>
+                              <Button variant="secondary" color="gray">
+                                Cancel
+                              </Button>
+                            </Dialog.Close>
+                            <Dialog.Close asChild>
+                              <Button onClick={handleSignup} variant="default">
+                                Sign Up
+                              </Button>
+                            </Dialog.Close>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </Dialog.Content>
                 </Dialog.Portal>
               </Dialog.Root>
             )}
-
-            {/* Mobile Menu */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent>
-                <nav className="flex flex-col space-y-4 mt-8">
-                  <Link href="#products" className="text-lg">
-                    Products
-                  </Link>
-                  <Link href="#services" className="text-lg">
-                    Services
-                  </Link>
-                  <Link href="#about" className="text-lg">
-                    About
-                  </Link>
-                  <Link href="#contact" className="text-lg">
-                    Contact
-                  </Link>
-                </nav>
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
       </div>
     </header>
-  );
-}
-
-function CartPreview() {
-  const cartItems = [
-    {
-      name: "Fresh Organic Apples",
-      price: 4.99,
-      quantity: 2,
-      image: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6",
-    },
-    {
-      name: "Premium Beef Steak",
-      price: 29.99,
-      quantity: 1,
-      image: "https://images.unsplash.com/photo-1603048297172-c92544798d5e",
-    },
-  ];
-
-  return (
-    <div>
-      <div className="space-y-4">
-        {cartItems.map((item) => (
-          <div
-            key={item.name}
-            className="flex items-center space-x-4 border-b pb-4"
-          >
-            <div className="relative h-16 w-16">
-              <img
-                src={item.image}
-                alt={item.name}
-                className="object-cover rounded"
-              />
-            </div>
-            <div className="flex-1">
-              <h4 className="font-medium">{item.name}</h4>
-              <p className="text-sm text-gray-600">
-                {item.quantity} × ${item.price}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-6 space-y-4">
-        <div className="flex justify-between font-medium">
-          <span>Total</span>
-          <span>$39.97</span>
-        </div>
-        <Button className="w-full bg-green-600 hover:bg-green-700">
-          Checkout
-        </Button>
-      </div>
-    </div>
   );
 }
