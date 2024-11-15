@@ -23,6 +23,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Badge } from "@/components/ui/badge";
 import { login, signup } from "@/app/auth/login/actions";
 import CartPreview from "../CartPreview";
+import { supabase } from "@/lib/supabase";
 
 export default function Header() {
   const { isLoggedIn, setIsLoggedIn } = useUserContext();
@@ -43,7 +44,6 @@ export default function Header() {
 
   useEffect(() => {
     const getUser = async () => {
-      const supabase = await createClient();
       const { data: user, error } = await supabase.auth.getUser();
       if (!error) {
         setIsLoggedIn(!!user);

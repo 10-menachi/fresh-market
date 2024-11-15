@@ -1,12 +1,10 @@
 "use server";
 
+import { supabase } from "@/lib/supabase";
 import { createClient } from "@/utils/supabase/server";
-import { AuthError } from "@supabase/supabase-js";
 
 export async function login(formData: FormData) {
   console.log("DEBUG STATEMENT");
-
-  const supabase = await createClient();
 
   const user_data = {
     email: formData.get("email") as string,
