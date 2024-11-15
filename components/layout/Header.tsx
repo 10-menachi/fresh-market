@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,10 +21,28 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import * as Dialog from "@radix-ui/react-dialog";
+import { createClient } from "@/utils/supabase/client";
 
 export default function Header() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Simulate login state
-  const [tab, setTab] = useState("login"); // Track the selected tab (login/signup)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [tab, setTab] = useState("login");
+
+  useEffect(() => {
+    const getUser = async () => {
+      const supabase = await createClient();
+
+      const { data: user, error } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error("Error fetching user:", error.message);
+        setIsLoggedIn(false);
+      } else {
+        setIsLoggedIn(!!user);
+      }
+    };
+
+    getUser();
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b">
