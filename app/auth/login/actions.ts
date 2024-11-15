@@ -21,17 +21,23 @@ export async function login(formData: FormData) {
     return {
       error: error.message,
       status: error.status,
+      user: null,
     };
   }
 
   if (user) {
     return {
-      email: user.user.email,
-      name: user.user.user_metadata?.full_name || "Anonymous",
+      error: null,
+      status: 200,
+      user: user,
     };
   }
 
-  return null;
+  return {
+    error: "Unknown error",
+    status: 500,
+    user: null,
+  };
 }
 
 export async function signup(formData: FormData) {
@@ -48,15 +54,24 @@ export async function signup(formData: FormData) {
   } = await supabase.auth.signUp(user_data);
 
   if (error) {
-    return new AuthError(error.message);
+    return {
+      error: error.message,
+      status: error.status,
+      user: null,
+    };
   }
 
   if (user) {
     return {
-      email: user.email,
-      name: user.user_metadata?.full_name || "Anonymous",
+      error: null,
+      status: 200,
+      user: user,
     };
   }
 
-  return new AuthError("Unknown error");
+  return {
+    error: "Unknown error",
+    status: 500,
+    user: null,
+  };
 }

@@ -23,12 +23,11 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Badge } from "@/components/ui/badge";
 import { login, signup } from "@/app/auth/login/actions";
 import CartPreview from "../CartPreview";
-import ToastDemo from "../Toast";
-import { AuthError } from "@supabase/supabase-js";
 
 export default function Header() {
   const { isLoggedIn, setIsLoggedIn } = useUserContext();
   const [tab, setTab] = useState("login");
+  const [isOpen, setIsOpen] = useState(false);
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -36,7 +35,11 @@ export default function Header() {
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
-  const [error, setError] = useState<AuthError | null>(null);
+  const [error, setError] = useState<{
+    message: string;
+    status: number;
+    error: string;
+  } | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -48,65 +51,140 @@ export default function Header() {
     };
 
     getUser();
-  }, [setIsLoggedIn, setError]);
+  }, [setIsLoggedIn]);
 
   const handleLogin = async () => {
-    if (!loginEmail || !loginPassword) {
-      setError(new AuthError("Kindly fill in all fields", 400, "400"));
-      return;
-    }
+    try {
+      if (!loginEmail || !loginPassword) {
+        setError({
+          message: "Kindly fill in all fields",
+          status: 400,
+          error: "400",
+        });
+        return;
+      }
 
-    const formData = new FormData();
-    formData.append("email", loginEmail);
-    formData.append("password", loginPassword);
-    const response = await login(formData);
-    if (response instanceof AuthError) {
-      setError(response);
-    }
+      const formData = new FormData();
+      formData.append("email", loginEmail);
+      formData.append("password", loginPassword);
 
-    console.log(response);
+      const response = await login(formData);
+
+      if (response.error) {
+        setError({
+          message: response.error,
+          status: Number(response.status),
+          error: String(response.status),
+        });
+
+        setTimeout(() => {
+          setError(null);
+        }, 5000);
+        return;
+      }
+    } catch (error) {
+      setError({
+        message: "An error occurred",
+        status: 500,
+        error: "500",
+      });
+    } finally {
+      setIsOpen(false);
+    }
   };
 
   const handleSignup = async () => {
-    if (!signupName || !signupEmail || !signupPassword) {
-      setError(new AuthError("Kindly fill in all fields", 400, "400"));
-      return;
+    try {
+      if (!signupName || !signupEmail || !signupPassword) {
+        setError({
+          message: "Kindly fill in all fields",
+          status: 400,
+          error: "400",
+        });
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("name", signupName);
+      formData.append("email", signupEmail);
+      formData.append("password", signupPassword);
+
+      const response = await signup(formData);
+
+      if (response.error) {
+        setError({
+          message: response.error,
+          status: Number(response.status),
+          error: String(response.status),
+        });
+        return;
+      }
+
+      setError(null);
+    } catch (error) {
+      setError({
+        message: "An error occurred",
+        status: 500,
+        error: "500",
+      });
+    } finally {
+      setIsOpen(false);
     }
-
-    const formData = new FormData();
-    formData.append("name", signupName);
-    formData.append("email", signupEmail);
-    formData.append("password", signupPassword);
-    const response = await signup(formData);
-
-    if (response instanceof AuthError) {
-      setError(response);
-    } else {
-      // Handle successful signup, e.g., show success message, navigate, etc.
-    }
-
-    console.log(response);
   };
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b">
       {error && (
-        <ToastDemo
-          title={error.name}
-          code={error.code || ""}
-          description={error.message}
-          open={true}
-        />
+        <div
+          id="toast-danger"
+          className="flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800 absolute top-4 right-2 z-50"
+          role="alert"
+        >
+          <div className="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg dark:bg-red-800 dark:text-red-200">
+            <svg
+              className="w-5 h-5"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 11.793a1 1 0 1 1-1.414 1.414L10 11.414l-2.293 2.293a1 1 0 0 1-1.414-1.414L8.586 10 6.293 7.707a1 1 0 0 1 1.414-1.414L10 8.586l2.293-2.293a1 1 0 0 1 1.414 1.414L11.414 10l2.293 2.293Z" />
+            </svg>
+            <span className="sr-only">Error icon</span>
+          </div>
+          <div className="ms-3 text-sm font-normal">{error.message}</div>
+          <button
+            type="button"
+            className="ms-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex items-center justify-center h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700"
+            aria-label="Close"
+            onClick={() => setError(null)}
+          >
+            <span className="sr-only">Close</span>
+            <svg
+              className="w-3 h-3"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 14 14"
+            >
+              <path
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+              />
+            </svg>
+          </button>
+        </div>
       )}
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <ShoppingBasket className="h-6 w-6 text-green-600" />
             <span className="font-bold text-xl">Fresh Market</span>
           </Link>
 
-          {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <Link
               href="#products"
@@ -131,9 +209,7 @@ export default function Header() {
             </Link>
           </nav>
 
-          {/* Search, Cart, Login/Profile */}
           <div className="flex items-center space-x-4">
-            {/* Search */}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -153,7 +229,6 @@ export default function Header() {
               </SheetContent>
             </Sheet>
 
-            {/* Cart */}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
@@ -173,7 +248,6 @@ export default function Header() {
               </SheetContent>
             </Sheet>
 
-            {/* Login/Profile */}
             {isLoggedIn ? (
               <Sheet>
                 <SheetTrigger asChild>
@@ -190,7 +264,7 @@ export default function Header() {
                     <p className="text-sm text-gray-600">johndoe@example.com</p>
                     <Button
                       className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white"
-                      onClick={() => setIsLoggedIn(false)} // Log out
+                      onClick={() => setIsLoggedIn(false)}
                     >
                       Logout
                     </Button>
@@ -198,141 +272,92 @@ export default function Header() {
                 </SheetContent>
               </Sheet>
             ) : (
-              <Dialog.Root>
+              <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
                 <Dialog.Trigger asChild>
                   <Button variant="ghost" size="icon">
                     <LogIn className="h-5 w-5" />
                   </Button>
                 </Dialog.Trigger>
                 <Dialog.Portal>
-                  <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
-                  <Dialog.Content className="fixed z-50 bg-white rounded-lg shadow-lg p-6 w-full max-w-md top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 focus:outline-none">
-                    <Dialog.Title className="text-lg font-semibold">
-                      Welcome to Fresh Market
+                  <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+                  <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-8 rounded-md shadow-lg w-96">
+                    <Dialog.Title className="text-xl font-medium">
+                      {tab === "login" ? "Login" : "Sign Up"}
                     </Dialog.Title>
-                    <Dialog.Description className="text-sm text-gray-600">
-                      Please login or sign up to continue.
-                    </Dialog.Description>
-
-                    {/* Tabs for Login and Signup */}
-                    <div className="mt-4">
-                      <div className="flex space-x-4 border-b pb-2">
-                        <button
-                          onClick={() => setTab("login")}
-                          className={`font-medium ${
-                            tab === "login"
-                              ? "text-green-600 border-b-2 border-green-600"
-                              : "text-gray-600"
-                          }`}
+                    {tab === "login" ? (
+                      <div>
+                        <Input
+                          placeholder="Email"
+                          type="email"
+                          value={loginEmail}
+                          onChange={(e) => setLoginEmail(e.target.value)}
+                          className="mt-4"
+                        />
+                        <Input
+                          placeholder="Password"
+                          type="password"
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          className="mt-4"
+                        />
+                        <Button
+                          variant="default"
+                          className="w-full mt-4 bg-green-600 hover:bg-green-700"
+                          onClick={handleLogin}
                         >
-                          Log In
-                        </button>
-                        <button
-                          onClick={() => setTab("signup")}
-                          className={`font-medium ${
-                            tab === "signup"
-                              ? "text-green-600 border-b-2 border-green-600"
-                              : "text-gray-600"
-                          }`}
-                        >
-                          Sign Up
-                        </button>
-                      </div>
-
-                      {/* Login Form */}
-                      {tab === "login" && (
-                        <div className="flex flex-col gap-3 mt-4">
-                          <label
-                            htmlFor="loginEmail"
-                            className="text-sm font-semibold mb-1"
-                          >
-                            Email
-                          </label>
-                          <Input
-                            id="loginEmail"
-                            type="email"
-                            placeholder="Your email"
-                            value={loginEmail}
-                            onChange={(e) => setLoginEmail(e.target.value)}
-                          />
-
-                          <label
-                            htmlFor="loginPassword"
-                            className="text-sm font-semibold mb-1"
-                          >
-                            Password
-                          </label>
-                          <Input
-                            id="loginPassword"
-                            type="password"
-                            placeholder="Your password"
-                            value={loginPassword}
-                            onChange={(e) => setLoginPassword(e.target.value)}
-                          />
-
-                          <Button
-                            onClick={handleLogin}
-                            className="mt-4 bg-green-600 hover:bg-green-700"
-                          >
-                            Log In
-                          </Button>
-                        </div>
-                      )}
-
-                      {/* Signup Form */}
-                      {tab === "signup" && (
-                        <div className="flex flex-col gap-3 mt-4">
-                          <label
-                            htmlFor="signupName"
-                            className="text-sm font-semibold mb-1"
-                          >
-                            Name
-                          </label>
-                          <Input
-                            id="signupName"
-                            type="text"
-                            placeholder="Your name"
-                            value={signupName}
-                            onChange={(e) => setSignupName(e.target.value)}
-                          />
-
-                          <label
-                            htmlFor="signupEmail"
-                            className="text-sm font-semibold mb-1"
-                          >
-                            Email
-                          </label>
-                          <Input
-                            id="signupEmail"
-                            type="email"
-                            placeholder="Your email"
-                            value={signupEmail}
-                            onChange={(e) => setSignupEmail(e.target.value)}
-                          />
-
-                          <label
-                            htmlFor="signupPassword"
-                            className="text-sm font-semibold mb-1"
-                          >
-                            Password
-                          </label>
-                          <Input
-                            id="signupPassword"
-                            type="password"
-                            placeholder="Your password"
-                            value={signupPassword}
-                            onChange={(e) => setSignupPassword(e.target.value)}
-                          />
-
-                          <Button
-                            onClick={handleSignup}
-                            className="mt-4 bg-green-600 hover:bg-green-700"
+                          Login
+                        </Button>
+                        <p className="mt-2 text-sm text-center text-gray-600">
+                          Don't have an account?{" "}
+                          <span
+                            className="text-blue-600 cursor-pointer"
+                            onClick={() => setTab("signup")}
                           >
                             Sign Up
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                          </span>
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Input
+                          placeholder="Name"
+                          type="text"
+                          value={signupName}
+                          onChange={(e) => setSignupName(e.target.value)}
+                          className="mt-4"
+                        />
+                        <Input
+                          placeholder="Email"
+                          type="email"
+                          value={signupEmail}
+                          onChange={(e) => setSignupEmail(e.target.value)}
+                          className="mt-4"
+                        />
+                        <Input
+                          placeholder="Password"
+                          type="password"
+                          value={signupPassword}
+                          onChange={(e) => setSignupPassword(e.target.value)}
+                          className="mt-4"
+                        />
+                        <Button
+                          variant="default"
+                          className="w-full mt-4 bg-green-600 hover:bg-green-700"
+                          onClick={handleSignup}
+                        >
+                          Sign Up
+                        </Button>
+                        <p className="mt-2 text-sm text-center text-gray-600">
+                          Already have an account?{" "}
+                          <span
+                            className="text-blue-600 cursor-pointer"
+                            onClick={() => setTab("login")}
+                          >
+                            Login
+                          </span>
+                        </p>
+                      </div>
+                    )}
                   </Dialog.Content>
                 </Dialog.Portal>
               </Dialog.Root>
